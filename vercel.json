@@ -1,4 +1,8 @@
 {
   "version": 2,
-  "routes": [{ "src": "/(.*)", "dest": "/api/index.js" }]
+  "rewrites": [
+    { "source": "/graphql", "destination": "/api" },
+    { "source": "/health", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/api" }
+  ]
 }
