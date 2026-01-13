@@ -1,8 +1,7 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/graphql", "destination": "/api" },
-    { "source": "/health", "destination": "/api" },
-    { "source": "/(.*)", "destination": "/api" }
+    { "source": "/graphql", "destination": "/api/graphql" },
+    { "source": "/health", "destination": "/api/health" }
   ]
 }
