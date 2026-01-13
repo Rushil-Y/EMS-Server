@@ -10,6 +10,9 @@ const resolvers = require("./GqlResolvers");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+/**
+ * CORS
+ */
 const allowedOrigins = [
   "https://rushils-ems-ui.vercel.app",
   "http://localhost:3000",
@@ -18,13 +21,8 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow server-to-server / Postman / Vercel health checks
       if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
+      if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error("CORS blocked origin: " + origin));
     },
     methods: ["GET", "POST", "OPTIONS"],
@@ -35,44 +33,49 @@ app.use(
 app.options("*", cors());
 
 /**
- * Static & health check
+ * Basic routes
  */
 app.use(express.static("public"));
-app.get("/health", (req, res) => res.json({ ok: true }));
 
-/**
- * Apollo GraphQL server
- */
-const apollo = new ApolloServer({
-  typeDefs,
-  resolvers,
+app.get("/", (req, res) => {
+  res.send("EMS Server running. Use /graphql");
 });
 
+app.get("/health", (req, res) => res.json({ ok: true }));
+
+const apollo = new ApolloServer({ typeDefs, resolvers });
+
 let apolloStarted = false;
+let initPromise = null;
 
 async function init() {
-  await dbConnect();
+  if (initPromise) return initPromise;
 
-  if (!apolloStarted) {
-    await apollo.start();
-    apollo.applyMiddleware({
-      app,
-      path: "/graphql",
-      cors: false,
-    });
-    apolloStarted = true;
-  }
+  initPromise = (async () => {
+    await dbConnect();
+
+    if (!apolloStarted) {
+      await apollo.start();
+      apollo.applyMiddleware({ app, path: "/graphql", cors: false });
+      apolloStarted = true;
+    }
+  })();
+
+  return initPromise;
 }
 
-init().catch((err) => console.error("Init error:", err));
-
+// Local dev: start normally
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`App is running : http://localhost:${PORT}/`);
-    console.log(
-      `GraphQL endpoint : http://localhost:${PORT}${apollo.graphqlPath}`
-    );
-  });
+  init()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`App is running : http://localhost:${PORT}/`);
+        console.log(
+          `GraphQL endpoint : http://localhost:${PORT}${apollo.graphqlPath}`
+        );
+      });
+    })
+    .catch((err) => console.error("Init error:", err));
 }
 
-module.exports = app;
+module.exports = { app, init };

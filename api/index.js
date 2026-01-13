@@ -1,5 +1,6 @@
-const app = require("../server/main");
+const { app, init } = require("../server/main");
 
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
+  await init();
   return app(req, res);
 };
