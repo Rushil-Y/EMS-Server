@@ -1,15 +1,20 @@
 const mongoose = require("mongoose");
-require("dotenv").config();
-const uri = process.env.MONGODB_CONNECTION_URL;
+
+let cached = global.__mongoose;
+if (!cached) cached = global.__mongoose = { conn: null, promise: null };
 
 async function dbConnect() {
-    try {
+  if (cached.conn) return cached.conn;
 
-        await mongoose.connect(uri);
-        console.log("Db Connected!");
-    } catch (error) {
-        console.error(error)
-    }
+  const uri = process.env.MONGO_URI;
+  if (!uri) throw new Error("Missing MONGO_URI");
+
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(uri, { bufferCommands: false });
+  }
+
+  cached.conn = await cached.promise;
+  return cached.conn;
 }
 
-module.exports = { dbConnect }
+module.exports = { dbConnect };
